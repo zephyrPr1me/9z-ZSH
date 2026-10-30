@@ -1,6 +1,7 @@
 # 10-options: опции, completion, история
+# compinit здесь не вызываем: oh-my-zsh.sh делает это сам с кэшем
+# и compaudit, повторный вызов только замедлял старт.
 setopt PROMPT_SUBST
-autoload -Uz compinit && compinit -d "$ZSH_COMPDUMP"
 zstyle ':completion:*' menu select
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 

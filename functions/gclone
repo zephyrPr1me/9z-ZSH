@@ -1,0 +1,18 @@
+# gclone - shallow clone git repository (--depth 1)
+# Usage: gclone <url> [directory]
+
+function gclone() {
+    local url="$1"
+    local dir="$2"
+
+    if [[ -z "$url" ]]; then
+        echo "Использование: gclone <url> [папка]"
+        return 1
+    fi
+
+    if [[ -n "$dir" ]]; then
+        git clone --depth 1 "$url" "$dir"
+    else
+        git clone --depth 1 "$url"
+    fi
+}

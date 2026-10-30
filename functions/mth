@@ -1,0 +1,72 @@
+# mth - Theme manager for macchina
+# Usage: mth [theme_name]
+#        mth list
+#        mth current
+
+function mth() {
+    local theme_name="$1"
+
+    local MACHINA_CONFIG="$HOME/.config/macchina/macchina.toml"
+    local THEMES_DIR="$HOME/.config/macchina/themes"
+
+    # List available custom themes
+    if [[ "$theme_name" == "list" || -z "$theme_name" ]]; then
+        echo "Available macchina themes:"
+        for theme_file in "$THEMES_DIR"/*.toml; do
+            local tname=$(basename "$theme_file" .toml)
+            # Skip default themes (Beryllium, Helium, Hydrogen, Lithium)
+            local is_default=false
+            case "$tname" in
+                Beryllium|Helium|Hydrogen|Lithium) is_default=true ;;
+            esac
+            if [[ "$is_default" == "false" && -f "$theme_file" ]]; then
+                # Check if theme is currently active
+                local is_active=false
+                if grep -q "theme = \"$tname\"" "$MACHINA_CONFIG" 2>/dev/null; then
+                    is_active=true
+                fi
+                if [[ "$is_active" == "true" ]]; then
+                    echo "  $tname (active)"
+                else
+                    echo "  $tname"
+                fi
+            fi
+        done
+        return 0
+    fi
+
+    # Check if theme exists
+    local theme_file="$THEMES_DIR/${theme_name}.toml"
+    if [[ ! -f "$theme_file" ]]; then
+        echo "Error: Theme '$theme_name' not found."
+        echo "Available custom themes:"
+        for tf in "$THEMES_DIR"/*.toml; do
+            local tfname=$(basename "$tf" .toml)
+            case "$tfname" in
+                Beryllium|Helium|Hydrogen|Lithium) continue ;;
+            esac
+            echo "  $tfname"
+        done
+        return 1
+    fi
+
+    # Update the theme in config
+    # Backup the current config
+    if [[ -f "$MACHINA_CONFIG" ]]; then
+        cp -f "$MACHINA_CONFIG" "$MACHINA_CONFIG.bak"
+    fi
+
+    # Replace the theme line
+    if grep -q "^theme = " "$MACHINA_CONFIG"; then
+        sed -i "s|^theme = .*|theme = \"$theme_name\"|" "$MACHINA_CONFIG"
+    else
+        echo "theme = \"$theme_name\"" >> "$MACHINA_CONFIG"
+    fi
+
+    echo "Theme switched to: $theme_name"
+
+    # Try to apply the theme immediately
+    if command -v macchina &>/dev/null; then
+        macchina --theme "$theme_name" 2>/dev/null || true
+    fi
+}

@@ -2,19 +2,45 @@
 unalias please 2>/dev/null
 please() { sudo $(fc -ln -1) }
 
+unalias reload 2>/dev/null
+reload() { exec zsh }  # чистый перезапуск: повторный source размножал бы PATH
+
 cc() {
     local src="${1:-main.c}"
     local out="${src%.c}"
-    gcc -O3 -march=native "$src" -o "$out"
+    gcc -Wall -Wextra -O3 -march=native "$src" -o "$out"
+}
+
+cppc() {
+	local src="${1:-main.c}"
+	local out="${src%.c}"
+	g++ -std=c++20 -Wall -Wextra -Wshadow -g "$src" -o "$out"
 }
 
 vf() { local f && f="$(fzf)" && nvim "$f"; }
-cr() {
-    local src="${1:-main.c}" out="/tmp/cr-$RANDOM"
-    gcc -O3 -march=native "$src" -o "$out" && "$out"
-    command rm -f "$out"
-}
+cn() {
+    if (( $# < 1 )); then
+        echo "Usage: crun <file.c> [args...]"
+        return 1
+    fi
 
+    local src="$1"
+    shift
+
+    if [[ ! -f "$src" ]]; then
+        echo "Error: file not found: $src"
+        return 1
+    fi
+
+    local exe="build/${src:t:r}"
+
+    mkdir -p build || return 1
+
+    gcc -Wall -Wextra -Wpedantic -std=c11 -O2 -g \
+        "$src" -o "$exe" || return 1
+
+    "./$exe" "$@"
+}
 # Git / Docker
 unalias gcl 2>/dev/null  # из oh-my-zsh git-плагина; заменяем на clone+cd
 gcl() {
@@ -27,7 +53,10 @@ gcl() {
     [[ -n "$dir" && -d "$dir" ]] && cd "$dir"
 }
 
-_dir_info() {
+# Инфоблок о директории по запросу, а не хуком на каждый cd:
+# глоб * в огромных каталогах (~, /usr) тормозил каждый переход.
+# Не называть di: алиас docker images из OMZ
+dirinfo() {
     local -a dirs files
     dirs=( */(ND) )
     files=( *(ND.) )
@@ -37,7 +66,6 @@ _dir_info() {
         print -P "  %F{240}git:%f %F{magenta}$(git rev-parse --abbrev-ref HEAD 2>/dev/null)%f$(git status --porcelain 2>/dev/null | head -1 | grep -q . && print ' %F{yellow}*%f')"
     fi
 }
-add-zsh-hook chpwd _dir_info
 
 cd() {
     local target
